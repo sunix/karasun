@@ -1,0 +1,80 @@
+name: PR preview APK
+
+# Builds a sideloadable Android APK for each PR so it can be tested on a real phone
+# without needing a local build machine. Uses a local Gradle build inside the runner
+# (expo prebuild + gradlew), not EAS Build, so no Expo account/token is required.
+#
+# Uses the "release" build type (signed with the default debug keystore, since no
+# release signing key is configured) rather than "debug": a debug build expects to
+# load its JS bundle live from a Metro dev server and fails with "Unable to load
+# script" when just installed standalone, whereas release embeds the JS bundle in
+# the APK so it runs on its own.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+concurrency:
+  group: pr-preview-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  build-android-preview:
+    runs-on: ubuntu-latest
+    # Optional repository variable: set SPOTIFY_CLIENT_ID so the preview APK can log
+    # into Spotify directly. Not a secret (PKCE client IDs are public), a repo "variable"
+    # is fine. Leave unset and the build still works, it just shows the setup screen.
+    env:
+      EXPO_PUBLIC_SPOTIFY_CLIENT_ID: ${{ vars.SPOTIFY_CLIENT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew assembleRelease
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: karasun-preview-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 14
+
+      - name: Comment PR with build link
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `📱 APK de test prêt. Télécharge l'artifact **karasun-preview-apk** depuis [ce run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}), dézippe-le, puis installe le \`.apk\` sur ton téléphone Android (autorise "installer depuis une source inconnue" si demandé).`
+            })
