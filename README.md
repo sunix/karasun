@@ -69,6 +69,35 @@ public). Sans elle, le build fonctionne quand même, l'app affiche juste l'écra
 URI de redirection supplémentaire sur le Spotify Developer Dashboard (différente de
 celle utilisée par Expo Go en dev).
 
+## Distribution & mises à jour (sans Google Play)
+
+Pas de passage par le Play Store : l'app s'installe une première fois par sideload, puis
+se met à jour elle-même en te redirigeant vers la dernière Release GitHub.
+
+- **Versioning automatique** : `.github/workflows/release-please.yml` (via
+  [release-please](https://github.com/googleapis/release-please)) surveille les commits
+  qui arrivent sur `main`. Il maintient une "Release PR" qui accumule les changements ;
+  quand tu la merges, il calcule la version (patch/minor/major), met à jour
+  `CHANGELOG.md`, `package.json` et `app.json` (`expo.version`), crée le tag `vX.Y.Z` et
+  publie une GitHub Release.
+  - **Important : les commits sur `main` doivent suivre
+    [Conventional Commits](https://www.conventionalcommits.org/)** (`fix:`, `feat:`,
+    `feat!:`/pied de page `BREAKING CHANGE:` pour un major, `chore:`, `docs:`, etc.),
+    sinon release-please ne peut pas déterminer le bump de version.
+- **Build de la release** : dès qu'une Release est publiée, `.github/workflows/release-apk.yml`
+  se déclenche, fixe `expo.version` et `expo.android.versionCode` d'après le tag
+  (`scripts/set-android-version.js` — un `versionCode` strictement croissant est requis
+  pour qu'Android accepte une mise à jour par-dessus l'install existante), rebuild l'APK
+  et l'attache à la Release GitHub.
+- **Mise à jour côté app** : `src/lib/appUpdates.ts` compare la version de l'app
+  (`expo.version`, figée au build) à la dernière Release GitHub (`GET
+  /repos/sunix/karasun/releases/latest`, endpoint public, pas besoin de token). Si plus
+  récente, une bannière (`src/components/UpdateBanner.tsx`, affichée dans
+  `app/_layout.tsx`) propose de télécharger l'APK — un tap ouvre le navigateur, qui
+  télécharge le fichier ; une fois le téléchargement terminé, ouvrir la notification lance
+  l'installateur standard d'Android (à confirmer manuellement, comme pour toute app hors
+  Play Store — pas de mise à jour silencieuse possible sans root).
+
 ## Vérifications
 
 ```bash
@@ -90,6 +119,9 @@ npm test            # Jest — logique pure (parseur LRC, extrapolation de posit
   périodique.
 - **Écrans** (`app/`) : connexion, recherche, file d'attente, lecteur karaoké, sélecteur
   d'appareil — via Expo Router.
+- **Mises à jour** (`src/lib/appUpdates.ts`) : vérifie la dernière Release GitHub au
+  démarrage et propose de télécharger l'APK si elle est plus récente (voir section
+  Distribution ci-dessus).
 
 ## Portée de cette v1 / limites connues
 
