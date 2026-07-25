@@ -3,12 +3,12 @@ import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Button, StyleSheet, Text, View } from 'react-native';
 
-import { exchangeCodeForTokens, getSpotifyRedirectUri, spotifyDiscovery, SPOTIFY_SCOPES } from '@/lib/spotifyAuth';
+import { getSpotifyRedirectUri, spotifyDiscovery, SPOTIFY_SCOPES } from '@/lib/spotifyAuth';
 import { useAuthStore } from '@/store/authStore';
 
 export default function LoginScreen() {
   const status = useAuthStore((s) => s.status);
-  const setTokens = useAuthStore((s) => s.setTokens);
+  const setPendingAuth = useAuthStore((s) => s.setPendingAuth);
   const [authError, setAuthError] = useState<string | null>(null);
 
   const clientId = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_ID;
@@ -25,16 +25,23 @@ export default function LoginScreen() {
     spotifyDiscovery
   );
 
+  // Expo Router treats the incoming redirect (karasun://callback) as navigation to
+  // app/callback.tsx rather than resolving promptAsync() in this screen, so the code
+  // exchange happens over there. This screen just needs to stash the PKCE verifier +
+  // state that callback.tsx will need, as soon as the request is generated.
   useEffect(() => {
-    if (!response) return;
-    if (response.type === 'success' && request?.codeVerifier) {
-      exchangeCodeForTokens(response.params.code, request.codeVerifier)
-        .then(setTokens)
-        .catch((e) => setAuthError(e.message ?? "Échec de l'authentification Spotify."));
-    } else if (response.type === 'error') {
-      setAuthError(response.error?.message ?? "Échec de l'authentification Spotify.");
+    if (request?.codeVerifier && request.state) {
+      setPendingAuth({ codeVerifier: request.codeVerifier, state: request.state });
     }
-  }, [response, request, setTokens]);
+  }, [request, setPendingAuth]);
+
+  useEffect(() => {
+    if (response?.type === 'error') {
+      setAuthError(response.error?.message ?? "Échec de l'authentification Spotify.");
+    } else if (response?.type === 'dismiss' || response?.type === 'cancel') {
+      setAuthError('Connexion annulée.');
+    }
+  }, [response]);
 
   if (status === 'loading' || status === 'idle') {
     return (
