@@ -46,6 +46,27 @@ npx expo start
 
 Scanne le QR code avec Expo Go sur ton téléphone Android.
 
+## Tester une PR sans PC (APK via GitHub Actions)
+
+Chaque pull request déclenche `.github/workflows/pr-preview-apk.yml`, qui compile un
+APK Android **debug** (installable directement, sans passer par Expo Go) dans le runner
+GitHub — pas besoin d'un PC ou d'EAS Build.
+
+1. Ouvre l'onglet **Actions** du dépôt (ou le run lié à la PR — un commentaire y renvoie
+   automatiquement une fois le build terminé).
+2. Télécharge l'artifact `karasun-preview-apk` (un `.zip`).
+3. Dézippe-le sur ton téléphone (l'app Fichiers par défaut sait le faire) et ouvre
+   `app-debug.apk` pour l'installer (autorise "installer depuis une source inconnue" si
+   demandé).
+
+Optionnel : pour que cet APK de test puisse réellement se connecter à Spotify, ajoute une
+variable de dépôt (Settings → Secrets and variables → Actions → Variables) nommée
+`SPOTIFY_CLIENT_ID` avec ton Client ID (ce n'est pas un secret, un Client ID PKCE est
+public). Sans elle, le build fonctionne quand même, l'app affiche juste l'écran
+"Configuration requise". Si tu l'ajoutes, pense à enregistrer `karasun://callback` comme
+URI de redirection supplémentaire sur le Spotify Developer Dashboard (différente de
+celle utilisée par Expo Go en dev).
+
 ## Vérifications
 
 ```bash
