@@ -98,6 +98,43 @@ se met à jour elle-même en te redirigeant vers la dernière Release GitHub.
   l'installateur standard d'Android (à confirmer manuellement, comme pour toute app hors
   Play Store — pas de mise à jour silencieuse possible sans root).
 
+### Keystore de release (important, à faire avant de compter sur l'auto-update)
+
+Par défaut, `release-apk.yml` signe l'APK avec la clé **debug** d'Expo — pratique, mais
+son **secret est public** (le même keystore que tous les projets Expo). Ça ne pose pas de
+problème pour un test manuel (`pr-preview-apk.yml`), mais ça annule la garantie de
+sécurité d'un auto-updater : n'importe qui pourrait signer un faux "update" avec la même
+clé et le faire passer pour légitime. Génère donc ta propre clé privée avant de compter
+sur l'auto-update pour de vrais utilisateurs :
+
+1. **Génère un keystore** (une seule fois, à faire sur ta machine, pas dans une CI) :
+   ```bash
+   keytool -genkeypair -v \
+     -keystore karasun-release.keystore \
+     -alias karasun-release \
+     -keyalg RSA -keysize 2048 -validity 10000 \
+     -storepass <UN_MOT_DE_PASSE_FORT> \
+     -keypass <UN_MOT_DE_PASSE_FORT>
+   ```
+2. **Sauvegarde `karasun-release.keystore` et les mots de passe dans un gestionnaire de
+   mots de passe.** Si tu les perds, tu ne pourras plus jamais publier de mise à jour
+   sous la même identité — tous les utilisateurs devraient désinstaller/réinstaller.
+   **Ne commite jamais ce fichier.**
+3. **Encode-le en base64** :
+   ```bash
+   base64 -w0 karasun-release.keystore > karasun-release.keystore.b64   # Linux
+   base64 -i karasun-release.keystore -o karasun-release.keystore.b64  # macOS
+   ```
+4. Sur GitHub → Settings → **Secrets and variables → Actions → Secrets**, ajoute :
+   - `ANDROID_KEYSTORE_BASE64` = contenu du fichier `.b64`
+   - `ANDROID_KEYSTORE_PASSWORD` = le `storepass` choisi
+   - `ANDROID_KEY_ALIAS` = `karasun-release`
+   - `ANDROID_KEY_PASSWORD` = le `keypass` choisi
+5. Prochaine Release publiée : `release-apk.yml` détecte ces secrets et signe avec cette
+   clé au lieu du debug (voir `plugins/withAndroidReleaseSigning.js`). Sans eux, le build
+   continue de fonctionner avec la clé debug, avec un avertissement visible dans les logs
+   du run.
+
 ## Vérifications
 
 ```bash

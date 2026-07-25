@@ -1,0 +1,71 @@
+const { withAppBuildGradle } = require('expo/config-plugins');
+
+/**
+ * Adds a "release" signingConfig to android/app/build.gradle that reads a keystore
+ * from ANDROID_KEYSTORE_PATH / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS /
+ * ANDROID_KEY_PASSWORD env vars (set by .github/workflows/release-apk.yml) when
+ * present, falling back to Expo's debug keystore otherwise.
+ *
+ * Why: Expo's default template signs release builds with the debug keystore, whose
+ * private key is public (bundled in every Expo project). That's fine for one-off
+ * manual test installs (pr-preview-apk.yml), but not for release-apk.yml's builds,
+ * which the app's self-updater (src/lib/appUpdates.ts) downloads and installs with
+ * implicit trust-on-first-use — anyone could forge a same-signature "update" using
+ * that same public key.
+ */
+module.exports = function withAndroidReleaseSigning(config) {
+  return withAppBuildGradle(config, (config) => {
+    const contents = config.modResults.contents;
+
+    const debugConfigBlock = `        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }`;
+
+    if (!contents.includes(debugConfigBlock)) {
+      throw new Error(
+        'withAndroidReleaseSigning: expected debug signingConfig block not found in ' +
+          'android/app/build.gradle — Expo\'s native template may have changed, update this plugin.'
+      );
+    }
+
+    const releaseConfigBlock = `${debugConfigBlock}
+        release {
+            def ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (ksPath) {
+                storeFile file(ksPath)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            } else {
+                storeFile file('debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        }`;
+
+    const releaseSigningLine = `            // Caution! In production, you need to generate your own keystore file.
+            // see https://reactnative.dev/docs/signed-apk-android.
+            signingConfig signingConfigs.debug`;
+
+    if (!contents.includes(releaseSigningLine)) {
+      throw new Error(
+        'withAndroidReleaseSigning: expected release buildType signingConfig line not found in ' +
+          'android/app/build.gradle — Expo\'s native template may have changed, update this plugin.'
+      );
+    }
+
+    const updatedReleaseSigningLine = `            // Caution! In production, you need to generate your own keystore file.
+            // see https://reactnative.dev/docs/signed-apk-android.
+            signingConfig signingConfigs.release`;
+
+    config.modResults.contents = contents
+      .replace(debugConfigBlock, releaseConfigBlock)
+      .replace(releaseSigningLine, updatedReleaseSigningLine);
+
+    return config;
+  });
+};
