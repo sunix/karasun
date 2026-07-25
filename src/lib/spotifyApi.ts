@@ -72,7 +72,8 @@ function mapDevice(raw: any): SpotifyDevice {
   };
 }
 
-export async function searchTracks(query: string, limit = 20): Promise<SpotifyTrack[]> {
+// Since February 2026, Spotify's /search endpoint caps "limit" at 10 (was 50).
+export async function searchTracks(query: string, limit = 10): Promise<SpotifyTrack[]> {
   if (!query.trim()) return [];
   const params = new URLSearchParams({ q: query, type: 'track', limit: String(limit) });
   const response = await spotifyFetch(`/search?${params.toString()}`);
