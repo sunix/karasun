@@ -1,0 +1,84 @@
+name: Release APK
+
+# Builds an installable APK for a GitHub Release (created by release-please.yml) and
+# attaches it as a release asset, so the app's in-app updater (src/lib/appUpdates.ts)
+# has something to download and Android has a versionCode to compare against.
+# Mirrors pr-preview-apk.yml's build steps; see that workflow for why the "release"
+# build type is used instead of "debug".
+#
+# Signed with a real, private release keystore when the ANDROID_KEYSTORE_BASE64 secret
+# is configured (see README's "Keystore de release" section) — required for the
+# in-app self-updater to mean anything security-wise, since Expo's debug keystore is
+# public. Falls back to the debug keystore (with a loud warning) if that secret isn't
+# set yet, so this workflow keeps working before you've generated one.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build and attach the APK to (e.g. v1.2.3)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-attach-apk:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_PUBLIC_SPOTIFY_CLIENT_ID: ${{ vars.SPOTIFY_CLIENT_ID }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Set Android version from release tag
+        run: node scripts/set-android-version.js "$RELEASE_TAG"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Decode release keystore
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "${{ github.workspace }}/release.keystore"
+
+      - name: Warn if signing with the public debug key
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
+        run: echo "::warning::ANDROID_KEYSTORE_BASE64 secret not set — this release APK is signed with Expo's public debug keystore, not a private release key. Fine to ship a first test build, but generate a real keystore before relying on the in-app auto-updater for real users (see README's 'Keystore de release' section)."
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Build release APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && format('{0}/release.keystore', github.workspace) || '' }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
+
+      - name: Attach APK to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: android/app/build/outputs/apk/release/app-release.apk

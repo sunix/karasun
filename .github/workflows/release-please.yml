@@ -1,0 +1,24 @@
+name: release-please
+
+# Maintains a "Release PR" that accumulates Conventional Commits changes landing on
+# main; merging that PR is what actually cuts a version bump (via
+# release-please-config.json / .release-please-manifest.json) and publishes a GitHub
+# Release + tag + changelog. release-apk.yml then attaches a built APK to that release.
+#
+# Requires commits reaching main to follow Conventional Commits (feat:, fix:, chore:,
+# feat!: / "BREAKING CHANGE:" footer for majors, etc.) so release-please can compute
+# the right version bump.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
