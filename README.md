@@ -98,6 +98,25 @@ se met à jour elle-même en te redirigeant vers la dernière Release GitHub.
   l'installateur standard d'Android (à confirmer manuellement, comme pour toute app hors
   Play Store — pas de mise à jour silencieuse possible sans root).
 
+### Déclencher `release-apk.yml` après une Release (obligatoire)
+
+Par défaut, `release-please.yml` publie la Release avec le token automatique
+`GITHUB_TOKEN`. Or GitHub empêche volontairement (anti-boucle infinie) qu'un événement
+créé par ce token déclenche un autre workflow — du coup `release-apk.yml` (déclenché par
+`on: release: published`) ne se lance **jamais** tant que ce n'est pas corrigé, même si la
+Release est bien créée.
+
+1. Crée un **Personal Access Token** : github.com → Settings (ton compte, pas le dépôt) →
+   Developer settings → Personal access tokens → Fine-grained tokens → Generate new token,
+   restreint à ce dépôt, avec les permissions **Contents: Read and write** et
+   **Pull requests: Read and write**.
+2. Ajoute-le comme secret du dépôt (Settings → Secrets and variables → Actions →
+   Secrets) sous le nom `RELEASE_PLEASE_TOKEN`.
+3. Sans ce secret, `release-please.yml` continue de fonctionner (il retombe sur
+   `GITHUB_TOKEN`), mais `release-apk.yml` ne se déclenchera jamais automatiquement —
+   tu peux dans ce cas le lancer manuellement (onglet Actions → "Release APK" → "Run
+   workflow", en indiquant le tag).
+
 ### Keystore de release (important, à faire avant de compter sur l'auto-update)
 
 Par défaut, `release-apk.yml` signe l'APK avec la clé **debug** d'Expo — pratique, mais
