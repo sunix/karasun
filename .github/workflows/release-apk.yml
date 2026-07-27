@@ -30,6 +30,9 @@ jobs:
     env:
       EXPO_PUBLIC_SPOTIFY_CLIENT_ID: ${{ vars.SPOTIFY_CLIENT_ID }}
       RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      # `secrets` isn't allowed in `if:` conditions, only in env/run/with — so compute
+      # this once here and check `env.HAS_RELEASE_KEYSTORE` in `if:` instead.
+      HAS_RELEASE_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,11 +61,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Decode release keystore
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: ${{ env.HAS_RELEASE_KEYSTORE == 'true' }}
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "${{ github.workspace }}/release.keystore"
 
       - name: Warn if signing with the public debug key
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
+        if: ${{ env.HAS_RELEASE_KEYSTORE != 'true' }}
         run: echo "::warning::ANDROID_KEYSTORE_BASE64 secret not set — this release APK is signed with Expo's public debug keystore, not a private release key. Fine to ship a first test build, but generate a real keystore before relying on the in-app auto-updater for real users (see README's 'Keystore de release' section)."
 
       - name: Generate native Android project
@@ -71,7 +74,7 @@ jobs:
       - name: Build release APK
         working-directory: android
         env:
-          ANDROID_KEYSTORE_PATH: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && format('{0}/release.keystore', github.workspace) || '' }}
+          ANDROID_KEYSTORE_PATH: ${{ env.HAS_RELEASE_KEYSTORE == 'true' && format('{0}/release.keystore', github.workspace) || '' }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
