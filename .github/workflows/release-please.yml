@@ -8,6 +8,14 @@ name: release-please
 # Requires commits reaching main to follow Conventional Commits (feat:, fix:, chore:,
 # feat!: / "BREAKING CHANGE:" footer for majors, etc.) so release-please can compute
 # the right version bump.
+#
+# Uses a personal access token (RELEASE_PLEASE_TOKEN secret) instead of the default
+# GITHUB_TOKEN: GitHub doesn't let events performed by the default GITHUB_TOKEN (like
+# publishing a release) trigger other workflows, as an anti-loop safeguard — which
+# would silently stop release-apk.yml (on: release: published) from ever running.
+# See README's "Déclencher release-apk.yml après une Release" section for how to
+# generate this token. Falls back to GITHUB_TOKEN if the secret isn't set yet, so
+# release-please itself keeps working (it just won't trigger release-apk.yml).
 
 on:
   push:
@@ -22,3 +30,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}

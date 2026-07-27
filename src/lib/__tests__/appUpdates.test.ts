@@ -17,6 +17,10 @@ describe('parseSemver', () => {
   it('returns null for a malformed version', () => {
     expect(parseSemver('not-a-version')).toBeNull();
   });
+
+  it('parses a component-prefixed tag (e.g. release-please with include-component-in-tag)', () => {
+    expect(parseSemver('karasun-v1.2.3')).toEqual([1, 2, 3]);
+  });
 });
 
 describe('isNewerVersion', () => {

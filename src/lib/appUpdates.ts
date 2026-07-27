@@ -9,9 +9,12 @@ export interface AvailableUpdate {
   notes: string | null;
 }
 
-/** Parses a "vX.Y.Z" or "X.Y.Z" string into [major, minor, patch], or null if malformed. */
+/**
+ * Extracts a semver from anywhere in a string ("v1.2.3", "1.2.3", "karasun-v1.2.3", ...)
+ * into [major, minor, patch], or null if none is found.
+ */
 export function parseSemver(version: string): [number, number, number] | null {
-  const match = version.replace(/^v/, '').match(/^(\d+)\.(\d+)\.(\d+)/);
+  const match = version.match(/(\d+)\.(\d+)\.(\d+)/);
   if (!match) return null;
   return [Number(match[1]), Number(match[2]), Number(match[3])];
 }
