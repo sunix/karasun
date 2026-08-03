@@ -64,7 +64,7 @@ jobs:
         if: ${{ env.HAS_RELEASE_KEYSTORE == 'true' }}
         run: |
           echo "ANDROID_KEYSTORE_BASE64 length: $(printf '%s' "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | wc -c) chars (compare to \`wc -c\` on your local .b64 file)"
-          printf '%s' "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | tr -d '\r' | base64 -d > "${{ github.workspace }}/release.keystore"
+          printf '%s' "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | tr -d '[:space:]' | base64 -d > "${{ github.workspace }}/release.keystore"
 
       - name: Warn if signing with the public debug key
         if: ${{ env.HAS_RELEASE_KEYSTORE != 'true' }}
