@@ -132,10 +132,13 @@ sur l'auto-update pour de vrais utilisateurs :
      -keystore karasun-release.keystore \
      -alias karasun-release \
      -keyalg RSA -keysize 2048 -validity 10000 \
-     -storepass <UN_MOT_DE_PASSE_FORT> \
-     -keypass <UN_MOT_DE_PASSE_FORT>
+     -storepass <UN_MOT_DE_PASSE_FORT>
    ```
-2. **Sauvegarde `karasun-release.keystore` et les mots de passe dans un gestionnaire de
+   Ne passe pas `-keypass` : le `keytool` moderne génère un keystore **PKCS12**, qui ne
+   supporte qu'un seul mot de passe pour tout (store + clé) — il ignorerait silencieusement
+   un `-keypass` différent, ce qui casserait la signature plus tard sans message clair
+   avant l'échec Gradle (`Given final block not properly padded`).
+2. **Sauvegarde `karasun-release.keystore` et le mot de passe dans un gestionnaire de
    mots de passe.** Si tu les perds, tu ne pourras plus jamais publier de mise à jour
    sous la même identité — tous les utilisateurs devraient désinstaller/réinstaller.
    **Ne commite jamais ce fichier.**
@@ -145,10 +148,10 @@ sur l'auto-update pour de vrais utilisateurs :
    base64 -i karasun-release.keystore -o karasun-release.keystore.b64  # macOS
    ```
 4. Sur GitHub → Settings → **Secrets and variables → Actions → Secrets**, ajoute :
-   - `ANDROID_KEYSTORE_BASE64` = contenu du fichier `.b64`
+   - `ANDROID_KEYSTORE_BASE64` = contenu du fichier `.b64` (colle-le depuis un éditeur de
+     texte, pas depuis un terminal, pour éviter tout caractère d'espacement parasite)
    - `ANDROID_KEYSTORE_PASSWORD` = le `storepass` choisi
    - `ANDROID_KEY_ALIAS` = `karasun-release`
-   - `ANDROID_KEY_PASSWORD` = le `keypass` choisi
 5. Prochaine Release publiée : `release-apk.yml` détecte ces secrets et signe avec cette
    clé au lieu du debug (voir `plugins/withAndroidReleaseSigning.js`). Sans eux, le build
    continue de fonctionner avec la clé debug, avec un avertissement visible dans les logs
