@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.1](https://github.com/sunix/karasun/compare/v1.2.0...v1.2.1) (2026-08-03)
+
+
+### Bug Fixes
+
+* keyPassword reported missing despite identical assignment ([#11](https://github.com/sunix/karasun/issues/11)) ([6b7e53e](https://github.com/sunix/karasun/commit/6b7e53e21bf60cb9aa0dcdf60a3c5c9fddc5278e))
+* reuse store password as key password (PKCS12 has no separate one) ([#10](https://github.com/sunix/karasun/issues/10)) ([393dde1](https://github.com/sunix/karasun/commit/393dde1be526db61064a9cc2976d9ff14899417f))
+* strip all whitespace (not just \r) before decoding the keystore ([#8](https://github.com/sunix/karasun/issues/8)) ([c26759e](https://github.com/sunix/karasun/commit/c26759edbcb74a500b64799654a1f3e42bc8b51f))
+* use = assignment for signingConfig properties, not setter-call style ([#12](https://github.com/sunix/karasun/issues/12)) ([3b1b9ce](https://github.com/sunix/karasun/commit/3b1b9ce15e46ce80056e7abd6fca8deadefa494b))
+
 ## [1.2.0](https://github.com/sunix/karasun/compare/v1.1.0...v1.2.0) (2026-07-27)
 
 
