@@ -73,13 +73,22 @@ jobs:
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
 
+      - name: Show generated release signingConfig (no secrets printed)
+        run: sed -n '/signingConfigs {/,/^    }/p' android/app/build.gradle
+
       - name: Build release APK
         working-directory: android
         env:
           ANDROID_KEYSTORE_PATH: ${{ env.HAS_RELEASE_KEYSTORE == 'true' && format('{0}/release.keystore', github.workspace) || '' }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-        run: ./gradlew assembleRelease
+        # --no-configuration-cache: raw System.getenv() reads in build.gradle aren't
+        # tracked as configuration-cache inputs, so Gradle can silently reuse a stale
+        # cached configuration from an earlier run (e.g. one made before secrets were
+        # set up correctly) without re-evaluating the signingConfig block at all -
+        # which would explain the identical "missing keyPassword" error surviving
+        # three unrelated Groovy syntax rewrites of that exact block.
+        run: ./gradlew assembleRelease --no-configuration-cache
 
       - name: Attach APK to the release
         uses: softprops/action-gh-release@v2
