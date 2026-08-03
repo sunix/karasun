@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import * as AuthSession from 'expo-auth-session';
 import * as SecureStore from 'expo-secure-store';
 
@@ -32,8 +33,22 @@ export function getSpotifyClientId(): string {
   return clientId;
 }
 
+/**
+ * Reads the scheme from the running app's own config (expo.scheme in app.json,
+ * baked in at build time) rather than hardcoding "karasun": the PR-preview build
+ * (.github/workflows/pr-preview-apk.yml) overrides it to "karasun-preview" via
+ * scripts/set-preview-app-id.js so it doesn't collide with the real app's
+ * karasun://callback when both are installed side by side. Hardcoding it here
+ * would silently break that — or worse, deep-link into the wrong installed app.
+ */
+function getAppScheme(): string {
+  const scheme = Constants.expoConfig?.scheme;
+  const resolved = Array.isArray(scheme) ? scheme[0] : scheme;
+  return resolved ?? 'karasun';
+}
+
 export function getSpotifyRedirectUri(): string {
-  return AuthSession.makeRedirectUri({ scheme: 'karasun', path: 'callback' });
+  return AuthSession.makeRedirectUri({ scheme: getAppScheme(), path: 'callback' });
 }
 
 export function buildAuthRequestConfig(): AuthSession.AuthRequestConfig {
