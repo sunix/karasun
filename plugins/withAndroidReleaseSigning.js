@@ -2,9 +2,9 @@ const { withAppBuildGradle } = require('expo/config-plugins');
 
 /**
  * Adds a "release" signingConfig to android/app/build.gradle that reads a keystore
- * from ANDROID_KEYSTORE_PATH / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS /
- * ANDROID_KEY_PASSWORD env vars (set by .github/workflows/release-apk.yml) when
- * present, falling back to Expo's debug keystore otherwise.
+ * from ANDROID_KEYSTORE_PATH / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS env vars
+ * (set by .github/workflows/release-apk.yml) when present, falling back to Expo's
+ * debug keystore otherwise.
  *
  * Why: Expo's default template signs release builds with the debug keystore, whose
  * private key is public (bundled in every Expo project). That's fine for one-off
@@ -12,6 +12,12 @@ const { withAppBuildGradle } = require('expo/config-plugins');
  * which the app's self-updater (src/lib/appUpdates.ts) downloads and installs with
  * implicit trust-on-first-use — anyone could forge a same-signature "update" using
  * that same public key.
+ *
+ * Reuses the store password as the key password rather than reading a separate
+ * ANDROID_KEY_PASSWORD: modern `keytool` defaults to PKCS12 keystores, which don't
+ * support a key password different from the store password (it silently ignores
+ * -keypass at generation time) — passing a different value here just fails signing
+ * with a "Given final block not properly padded" error.
  */
 module.exports = function withAndroidReleaseSigning(config) {
   return withAppBuildGradle(config, (config) => {
@@ -38,7 +44,7 @@ module.exports = function withAndroidReleaseSigning(config) {
                 storeFile file(ksPath)
                 storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
                 keyAlias System.getenv("ANDROID_KEY_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+                keyPassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
             } else {
                 storeFile file('debug.keystore')
                 storePassword 'android'
