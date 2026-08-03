@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/sunix/karasun/compare/v1.2.1...v1.3.0) (2026-08-03)
+
+
+### Features
+
+* give PR-preview APKs their own package id, scheme, and app name ([#14](https://github.com/sunix/karasun/issues/14)) ([a54c5d7](https://github.com/sunix/karasun/commit/a54c5d73a64eadf670c491e75eaff1212a2fccdd))
+
 ## [1.2.1](https://github.com/sunix/karasun/compare/v1.2.0...v1.2.1) (2026-08-03)
 
 
