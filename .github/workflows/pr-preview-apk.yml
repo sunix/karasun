@@ -9,6 +9,11 @@ name: PR preview APK
 # load its JS bundle live from a Metro dev server and fails with "Unable to load
 # script" when just installed standalone, whereas release embeds the JS bundle in
 # the APK so it runs on its own.
+#
+# scripts/set-preview-app-id.js gives the preview build its own package name,
+# scheme, and app name, so it installs as a separate app from the real one -
+# no uninstalling the production install to test a PR, and no ambiguity for
+# Spotify's OAuth redirect between the two apps when both are installed.
 
 on:
   pull_request:
@@ -53,6 +58,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Give the preview build its own package name, scheme, and app name
+        run: node scripts/set-preview-app-id.js
+
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
 
@@ -76,5 +84,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `📱 APK de test prêt. Télécharge l'artifact **karasun-preview-apk** depuis [ce run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}), dézippe-le, puis installe le \`.apk\` sur ton téléphone Android (autorise "installer depuis une source inconnue" si demandé).`
+              body: `📱 APK de test prêt (app séparée "karasun Preview", s'installe à côté de la vraie app sans conflit). Télécharge l'artifact **karasun-preview-apk** depuis [ce run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}), dézippe-le, puis installe le \`.apk\` sur ton téléphone Android (autorise "installer depuis une source inconnue" si demandé).`
             })

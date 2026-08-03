@@ -54,6 +54,12 @@ dans le runner GitHub — pas besoin d'un PC ou d'EAS Build. Il est signé avec 
 par défaut (pas de config de signature release), donc parfait pour du sideload/test, mais
 pas pour le Play Store.
 
+`scripts/set-preview-app-id.js` donne à ce build son propre nom ("karasun Preview"), son
+propre package Android (`....preview`) et son propre scheme (`karasun-preview://`) avant
+le `expo prebuild`. Résultat : cette app de test s'installe **à côté** de la vraie app,
+sans jamais entrer en conflit — pas besoin de désinstaller la version de prod pour tester
+une PR, même si Spotify est utilisé dans les deux en même temps.
+
 1. Ouvre l'onglet **Actions** du dépôt (ou le run lié à la PR — un commentaire y renvoie
    automatiquement une fois le build terminé).
 2. Télécharge l'artifact `karasun-preview-apk` (un `.zip`).
@@ -65,9 +71,10 @@ Optionnel : pour que cet APK de test puisse réellement se connecter à Spotify,
 variable de dépôt (Settings → Secrets and variables → Actions → Variables) nommée
 `SPOTIFY_CLIENT_ID` avec ton Client ID (ce n'est pas un secret, un Client ID PKCE est
 public). Sans elle, le build fonctionne quand même, l'app affiche juste l'écran
-"Configuration requise". Si tu l'ajoutes, pense à enregistrer `karasun://callback` comme
-URI de redirection supplémentaire sur le Spotify Developer Dashboard (différente de
-celle utilisée par Expo Go en dev).
+"Configuration requise". Si tu l'ajoutes, enregistre **`karasun-preview://callback`**
+comme URI de redirection supplémentaire sur le Spotify Developer Dashboard (en plus de
+celle d'Expo Go et de `karasun://callback` pour la vraie app — les trois peuvent coexister
+sur la même app Spotify).
 
 ## Distribution & mises à jour (sans Google Play)
 
