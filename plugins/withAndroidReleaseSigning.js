@@ -18,6 +18,13 @@ const { withAppBuildGradle } = require('expo/config-plugins');
  * support a key password different from the store password (it silently ignores
  * -keypass at generation time) — passing a different value here just fails signing
  * with a "Given final block not properly padded" error.
+ *
+ * Uses `=` assignment (not the classic Groovy `propertyName value` setter-call
+ * style) for every signingConfig property: with this project's AGP/Gradle versions,
+ * the setter-call style silently failed to stick for `keyPassword` specifically
+ * (Gradle reported "missing required property keyPassword" even though it was
+ * assigned the exact same value as storePassword, which worked) — `keyPassword` is
+ * apparently backed by a Gradle `Property<String>`, which needs a real assignment.
  */
 module.exports = function withAndroidReleaseSigning(config) {
   return withAppBuildGradle(config, (config) => {
@@ -39,10 +46,10 @@ module.exports = function withAndroidReleaseSigning(config) {
 
     const releaseConfigBlock = `${debugConfigBlock}
         release {
-            storeFile file(System.getenv("ANDROID_KEYSTORE_PATH") ?: 'debug.keystore')
-            storePassword System.getenv("ANDROID_KEYSTORE_PATH") ? System.getenv("ANDROID_KEYSTORE_PASSWORD") : 'android'
-            keyAlias System.getenv("ANDROID_KEYSTORE_PATH") ? System.getenv("ANDROID_KEY_ALIAS") : 'androiddebugkey'
-            keyPassword System.getenv("ANDROID_KEYSTORE_PATH") ? System.getenv("ANDROID_KEYSTORE_PASSWORD") : 'android'
+            storeFile = file(System.getenv("ANDROID_KEYSTORE_PATH") ?: 'debug.keystore')
+            storePassword = System.getenv("ANDROID_KEYSTORE_PATH") ? System.getenv("ANDROID_KEYSTORE_PASSWORD") : 'android'
+            keyAlias = System.getenv("ANDROID_KEYSTORE_PATH") ? System.getenv("ANDROID_KEY_ALIAS") : 'androiddebugkey'
+            keyPassword = System.getenv("ANDROID_KEYSTORE_PATH") ? System.getenv("ANDROID_KEYSTORE_PASSWORD") : 'android'
         }`;
 
     const releaseSigningLine = `            // Caution! In production, you need to generate your own keystore file.
