@@ -39,18 +39,10 @@ module.exports = function withAndroidReleaseSigning(config) {
 
     const releaseConfigBlock = `${debugConfigBlock}
         release {
-            def ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
-            if (ksPath) {
-                storeFile file(ksPath)
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEY_ALIAS")
-                keyPassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-            } else {
-                storeFile file('debug.keystore')
-                storePassword 'android'
-                keyAlias 'androiddebugkey'
-                keyPassword 'android'
-            }
+            storeFile file(System.getenv("ANDROID_KEYSTORE_PATH") ?: 'debug.keystore')
+            storePassword System.getenv("ANDROID_KEYSTORE_PATH") ? System.getenv("ANDROID_KEYSTORE_PASSWORD") : 'android'
+            keyAlias System.getenv("ANDROID_KEYSTORE_PATH") ? System.getenv("ANDROID_KEY_ALIAS") : 'androiddebugkey'
+            keyPassword System.getenv("ANDROID_KEYSTORE_PATH") ? System.getenv("ANDROID_KEYSTORE_PASSWORD") : 'android'
         }`;
 
     const releaseSigningLine = `            // Caution! In production, you need to generate your own keystore file.
